@@ -1,0 +1,147 @@
+# 6 – Le cycle de vie des composants
+
+## A – Comment se compose le cycle de vie des composants ?
+
+Chaque composant à un cycle de vie découpé en trois parties :
+
+-  **Le composant vient d'être monté** : le composant a été initialisé, et rendu dans le DOM.
+-  **Le composant vient d'être mis à jour** : un state qui interagit avec le composant a été mis à jour ce qui entraîne une mise à jour du composant et donc un re-rendu de celui-ci.
+-  **Le composant s'apprête à être démonté** : le composant s'apprête à être détruit, retiré du DOM
+
+Il est possible d'interagir avec ces différents cycle grâce aux méthodes que sont :
+
+-  componentDidMount
+-  componentDidUpdate
+-  componentWillUnmount
+
+## B – Interagir avec le cycle de vie - Montage du composant
+
+Reprenons notre composant Clock que nous avons créé précédemment.
+Nous avions auparavant utilisé un "setInterval" pour rendre notre horloge dynamique, nous allons réutiliser cette méthode mais cette fois ci en interagissant avec le cycle de vie du composant pour mettre à jour le state :
+
+```tsx title=components/clock.tsx
+import React, { Component } from "react"
+
+type Props = {}
+
+type State = {
+	date: Date
+}
+
+export default class clock extends Component<Props, State> {
+	timer: NodeJS.Timer | undefined
+	state = {
+		date: new Date(),
+	}
+
+	componentDidMount() {
+		this.timer = setInterval(() => {
+			this.setState({ date: new Date() })
+		}, 1000)
+	}
+
+	render() {
+		return <p>It is {this.state.date.toLocaleTimeString()}</p>
+	}
+}
+```
+
+Notre horloge fonctionne désormais correctement.
+Nous avons également stocké le setInterval en déclarant une propriété timer à notre composant.
+Lorsque le composant est initialisé nous exécutons un setInterval qui chaque seconde va modifier le state en lui réattribuant une nouvelle date en ce qui entraîne le **re-rendu** du composant.
+
+## C – Interagir avec le cycle de vie - Mise à jour du composant
+
+Nous pouvons vérifier que le composant subit une mise à jour à chaque mise à jour du state à l'aide de la méthode **componentDidUpdate**, il faut cependant faire attention à conditionner celui-ci au risque de se retrouver avec une boucle infinie :
+
+```tsx title=components/clock.tsx
+import React, { Component } from "react"
+
+type Props = {}
+
+type State = {
+	date: Date
+	compteur: number
+}
+
+export default class clock extends Component<Props, State> {
+	timer: NodeJS.Timer | undefined
+	state = {
+		date: new Date(),
+		compteur: 0,
+	}
+
+	componentDidMount() {
+		this.timer = setInterval(() => {
+			this.setState({ date: new Date() })
+		}, 1000)
+	}
+
+	componentDidUpdate(prevProps: Props, prevState: State) {
+		if (prevState.date !== this.state.date) {
+			this.setState((prev) => ({ compteur: prev.compteur + 1 }))
+		}
+	}
+
+	render() {
+		return (
+			<>
+				<p>It is {this.state.date.toLocaleTimeString()}</p>
+				<p>Nombre de mises à jour : {this.state.compteur}</p>
+			</>
+		)
+	}
+}
+```
+
+De cette manière à chaque fois que la date sera mise à jour, nous vérifions que le state précédent est différent du state actuel et nous mettons à jour le compteur de modification.
+
+## D – Interagir avec le cycle de vie - Démontage du composant
+
+Lorsque le composant s'apprête à être démonté, détruit, nous allons veiller à détruire l'instance du setInterval afin que notre application ne continue pas à exécuter celui-ci à l'aide de la méthode **componentWillUnmount** :
+
+```tsx title=components/clock.tsx
+import React, { Component } from "react"
+
+type Props = {}
+
+type State = {
+	date: Date
+	compteur: number
+}
+
+export default class clock extends Component<Props, State> {
+	timer: NodeJS.Timer | undefined
+	state = {
+		date: new Date(),
+		compteur: 0,
+	}
+
+	componentDidMount() {
+		this.timer = setInterval(() => {
+			this.setState({ date: new Date() })
+		}, 1000)
+	}
+
+	componentDidUpdate(prevProps: Props, prevState: State) {
+		if (prevState.date !== this.state.date) {
+			this.setState((prev) => ({ compteur: prev.compteur + 1 }))
+		}
+	}
+
+	componentWillUnmount(): void {
+		clearInterval(this.timer)
+	}
+
+	render() {
+		return (
+			<>
+				<p>It is {this.state.date.toLocaleTimeString()}</p>
+				<p>Nombre de mises à jour : {this.state.compteur}</p>
+			</>
+		)
+	}
+}
+```
+
+Maintenant, lorsque notre composant sera détruit, démonté, le setInterval ne continuera plus de s'exécuter.

@@ -1,0 +1,241 @@
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+
+# Mots de passe
+
+## Sommaire
+
+- [Introduction](#introduction)
+- [Contexte](#contexte)
+  - [Hashage VS Chiffrement](#hashage-vs-chiffrement)
+  - [Comment les hackeurs crackent les hachages de mots de passe](#comment-les-hackeurs-crackent-les-hachages-de-mots-de-passe)
+- [Concepts de stockage de mots de passe](#concepts-de-stockage-de-mots-de-passe)
+  - [Salage](#salage)
+  - [Poivrage](#poivrage)
+  - [Facteurs de coût](#facteurs-de-coût)
+- [Algorithmes de hachage](#algorithmes-de-hachage)
+- [Conclusion](#conclusion)
+
+## Introduction
+
+Il est essentiel de stocker les mots de passe de manière à éviter qu'ils ne soient obtenus par des hackeurs même si l'application ou la base de données est compromise. La majorité des langages de programmation et Frameworks modernes fournissent des fonctionnalités intégrées pour stocker les mots de passe de manière sécurisée.
+
+Après qu'un hackeur ait obtenu des hash de mot de passes stockés, il est possible de les brute-forcer hors-ligne. C'est pour cela qu'en tant que développeur, il est seulement possible de ralentir ces attaques en choisissant des algorithmes de hachage appropriés et en utilisant des facteurs de coût élevés.
+
+Cet aide mémoire fournit des conseils sur les différents domaines qui doivent être considérés lié au stockage des mots de passe.
+En bref :
+
+- **Utilisez Argon2id avec une configuration minimale de 19 Mib de mémoire, 2 itérations et 1 degré de parallélisme.**
+- **Si Argon2id n'est pas disponible dans votre langage de programmation, utilisez Scrypt avec un paramètre de coût CPU/Mémoire de 2^17, une taille minimale de bloc de 8 (1024 bytes) et un parallélisme de 1.**
+- **Pour les systèmes legacy qui utilisent Bcrypt, utilisez un facteur de coût de 10 ou plus avec une taille limite de mot de passe de 72 bytes.**
+- **Si la conformité FIPS-140 est requise, utilisez PBKDF2 avec un facteur de coût de 600 000 ou plus et configurez le avec une fonction de hachage HMAC-SHA-256 ou HMAC-SHA-512.**
+- **Envisagez d'utiliser un poivre (pepper) pour fournir une protection supplémentaire (bien qu'à lui seul, il ne fournisse aucune protection supplémentaire)**
+
+## Contexte
+
+### Hashage VS Chiffrement
+
+Le hachage et le chiffrement sont tous deux des moyens de protéger des données sensibles. Cependant, dans presques toutes les circonstances, **les mots de passe doivent être hachés et non chiffrés.**
+
+**Le hachage est unidirectionnel** (c'est-à-dire qu'il est impossible de déchiffrer un hash pour obtenir la valeur originelle). Le hachage est approprié pour la validation des mots de passe. Même si un hackeur obtient le hash, il ne peut pas entrer le hash obtenu dans le champs de connexion d l'application pour se connecter en tant que l'utilisateur.
+
+**Le chiffrement est bidirectionnel**, c'est-à-dire qu'il est possible de déchiffrer un texte chiffré pour obtenir la valeur originelle. Le chiffrement est approprié pour le stockage de données comme l'adresses des utilisateurs qui pourraient être affichées dans l'application sur le profil de l'utilisateur. Hacher ces données ne serait pas approprié car elles doivent être déchiffrées pour être affichées.
+
+Dans le contexte du stockage de mot de passe, le chiffrement ne devrait être utilisé que dans des cas particuliers où il est nécessaire d'obtenir le mot de passe en texte clair. Cela peut être nécessaire si l'application a esoin d'utiliser le mot de passe pour s'authentifier auprès d'un autre système qui ne prends pas en charge une méthode moderne pour accorder l'accès de manière programmatique, comme OpenID Connect (OIDC). Dans la mesure du possible, une architecture alternative devrait être utilisée pour éviter la nécessité de stocker les mots de passe sous forme chiffrée.
+
+### Comment les hackeurs crackent les hachages de mots de passe
+
+Bien qu'il ne soit pas possible de "déchiffrer" un mot de passe haché pour obtenir le mot de passe originel, il est possible de "craquer" un hash dans certaines circonstances.
+
+Les étapes basiques du processus de craquage sont :
+
+- Sélectionner un mot de passe possiblement utilisé par l'utilisateur (par exemple _Tortue1998_)
+- Calculer le hash du mot de passe.
+- Comparer le hash calculé avec le hash stocké. Si les deux correspondent, le mot de passe est trouvé.
+
+Ce processus est répété pour un grand nombre de mots de passe possibles jusqu'à ce que le mot de passe soit trouvé.
+
+Différentes méthodes peuvent être utilisées pour générer les mots de passe possibles, notamment par :
+
+- Une liste de mots de passe obtenus à partir de fuites de données.
+- Brute force
+- Des dictionnaires ou listes de mots de passe courants
+
+Bien que le nombre de possibilités soit énorme, avec du matériel performant (comme les GPU) et des services cloud disposant de nombreux serveurs, le coût de craquage des mots de passe est relativement faible pour un hackeur, surtout lorsque les bonnes pratiques ne sont pas suivies.
+
+**Les mots de passe forts stockés avec des algorithmes de hachage moderne en utilisant les meilleurs pratiques de hachage sont extrêmement difficiles à craquer.** Il en est de votre responsabilité en tant que développeur de choisir un algorithme de hachage approprié.
+
+Le choix d'un algorithme de hachage robuste et le suivi des bonnes pratiques de sécurité, telles que l'utilisation de sels aléatoires et de paramètres de hachage appropriés _(par exemple, PBKDF2 avec un facteur de coût élevé)_, sont des mesures cruciales pour assurer la sécurité des mots de passe stockés.
+
+## Concepts de stockage de mots de passe
+
+### Salage
+
+Un sel est **unique**, c'est une chaîne de caractère aléatoirement genéré et qui est ajoutée à chaque mot de passe dans le processus de hachage. Comme le sel est unique pour chaque utilisateur, un hackeur doit craquer chaque mot de passe individuellement en utilisant le sel correspondant. Cela rend le processus de craquage beaucoup plus difficile car le temps nécessaire pour craquer un mot de passe croît en proportion directe avec le nombre de hachages.
+
+Le salage protège également contre un hackeur qui pré-calcule des hash en utilsant des tables arc-en-ciel (rainbow tables). Les tables arc-en-ciel sont des tables de hachage pré-calculées qui peuvent être utilisées pour rechercher des mots de passe en texte clair correspondant à des hachages spécifiques. Le salage rend ces tables arc-en-ciel inutiles car le sel est unique pour chaque mot de passe. Enfin, le salage rends impossible la correspondance de hash, il est impossible de déterminer si deux utilisateurs ont le même mot de passe car les sels différents donneront des hachages différents même si les mots de passe sont identiques.
+
+Les algorithmes de hachage modernes tels que Argon2id, Bcrypt et PBKDF2 prennent en charge le salage.
+
+### Poivrage
+
+Un poivre peut être utilisé en plus du salage pour fournir une protection supplémentaire. Le but du poivre est d'empêcher qu'un hackeur puisse craquer un quelquonque mot de passe même si il a accès à la base de données, par exemple, s'il a exploité une vulnérabilité d'injection SQL ou qu'il a obtenu une sauvegarde de la base de données.
+
+Une des stratégies de poivrage consiste à hacher les mots de passe comme d'habitude et d'ensuite chiffrer les hash obtenus avec une clé de chiffrement symétrique en utilisant un algorithme de chiffrement HMAC avant de les stocker en base de donnée. La clé agissant comme le poivre. Les stratégies de poivrage n'affectent en rien la fonction de hachage des mots de passe.
+
+- Le poivre est **partagé entre les mots de passe stockés** contrairement au sel qui est unique pour chaque mot de passe.
+- Contrairement au sel, le poivre **ne doit pas être srocké dans une base de données.**
+- Les poivres sont des secrets qui devraient être stockés dans un coffre-fort de secrets comme Azure Key Vault, AWS Secrets Manager ou des HSM _(Hardware Security Module - Modules de Sécurité Matérielle)_.
+- Comme toute autre clé cryptographique, une stratégie de rotation des poivres devrait être envisagée.
+
+### Facteurs de coût
+
+Les facteurs de coût sont essentiellement le nombre d'itérations que l'algorithme de hachage doit effectuer pour chaque mot de passe. The but du facteur de coût est de rendre la calcul du hash plus coûteux en temps et en ressources. Cela ralentit les attaques par force brute et les attaques par dictionnaire.
+
+Lorsque vous choisissez un facteur de coût, il est nécessaire de trouver un équilibre entre la sécurité et la performance. Un facteur de coût élevé rendra le hachage plus sécurisé mais prendra plus de temps à calculer ce qui rendra le processus de connexion plus lent, si le facteur de coût est trop élevé, cela peut dégrader les performances de l'application et pourrait également être utilisé pour lancer une attaque par déni de service (DoS) en effectuant un grand nombre de tentatives de connexion pour épuiser les ressources du serveur.
+
+Il n'y a pas de règle d'or pour le facteur de coût , cela dépendra des ressources disponibles sur le serveur, du nombre d'utilisateurs et de la sensibilité des données protégées par le mot de passe. Il est recommandé de tester les performances de l'application avec différents facteurs de coût pour trouver le bon équilibre entre sécurité et performance. En règle générale, le calcul d'un hachage devrait prendre moins d'une seconde.
+
+#### Mise à niveau du facteur de coût
+
+L'avantage clé du facteur de coût est qu'il peut être augmenté ou diminuer au fil du temps à mesure que le matériel devient plus puissant ou que le nombre d'utilisateur croît.
+
+L'approche la plus courante pour mettre à niveau le facteur de coût consiste à attendre que l'utilisateur s'authentifie pour récupérer son mot de passe et à calculer le nouveau hash avec le facteur de coût mis à jour. Cela signifie que différents hachages auront des facteurs de coût différents et que certains hachages peuvent ne jamais être mis à niveau si l'utilisateur ne se reconnecte pas. Selon l'application, il peut être approprié de supprimer les hachages obsolètes après un certain temps et d'exiger des utilisateurs de réinitialiser leur mot de passe.
+
+## Algorithmes de hachage
+
+<Tabs>
+<TabItem value='argon2' label='Argon2id' default>
+Argon2id est un algorithme de hachage moderne qui a remporté le concours Password Hashing Competition (PHC) en 2015. Il est considéré comme l'algorithme de hachage le plus sécurisé et le plus efficace. Il est recommandé d'utiliser Argon2id pour le stockage des mots de passe.
+
+Il existe trois versions différentes de l'algorithme, la variante Argon2id est la plus recommandée. Argon2id est une combinaison des variantes Argon2i et Argon2d. Argon2id est plus résistant aux attaques par canaux auxiliaires et aux attaques par timing que Argon2i et plus résistant aux attaques par parallélisme que Argon2d.
+
+Le facteur de coût d'Argon2id est défini par trois paramètres contrairement à d'autres algorithmes dont celui-ci n'est défini que par le nombre d'itérations. Les paramètres sont :
+
+- **m:** La taille de la mémoire en Mib (Mebibytes)
+- **t:** Le nombre d'itérations
+- **p:** Le degré de parallélisme
+
+Les configurations recommandées pour Argon2id sont :
+
+- **m=47104** (46 Mib), **t=1**, **p=1** (À ne pas utiliser avec Argon2i)
+- **m=19456** (19 Mib), **t=2**, **p=1** (À ne pas utiliser avec Argon2i)
+- **m=12888** (12 Mib), **t=3**, **p=1**
+- **m=9216** (9 Mib), **t=4**, **p=1**
+- **m=7168** (7 Mib), **t=5**, **p=1**
+
+Ces paramètres de configuration fournissent une protection équivalente. La seule différence est un compromis entre l'utilisation du processeur (CPU) et de la mémoire (RAM). Les paramètres de configuration plus élevés utiliseront plus de mémoire mais moins de CPU et inversement.
+
+Argon2id est disponible dans les langages de programmation suivants :
+
+- JavaScript : [node-argon2](https://www.npmjs.com/package/argon2)
+- C# : [Konscious.Security.Cryptography.Argon2](https://www.nuget.org/packages/Konscious.Security.Cryptography.Argon2)
+- Go : [argon2](https://pkg.go.dev/golang.org/x/crypto/argon2)
+- PHP : [password_hash](https://www.php.net/manual/en/function.password-hash.php)
+- Ruby : [argon2](https://rubygems.org/gems/argon2)
+- Python : [argon2-cffi](https://pypi.org/project/argon2-cffi/)
+- Rust : [argon2rs](https://crates.io/crates/argon2rs)
+- Java : [argon2-jvm](https://github.com/phxql/argon2-jvm)
+
+</TabItem>
+<TabItem value='scrypt' label='Scrypt'>
+Scrypt est une fonction de dérivation de clé basée sur un mot de passe conçue par Colin Percival en 2009. Bien qu'Argon 2id soit le meilleur choix, Scrypt est une bonne alternative si Argon2id n'est pas disponible dans votre langage de programmation.
+
+Comme Argon2id, Scrypt possède trois paramètres de configuration :
+
+- **N:** Le paramètre de coût CPU/Mémoire, doit être une puissance de 2.
+- **r:** Le paramètre de taille des blocs, doit être une puissance de 2 et supérieur à 0.
+- **p:** Le paramètre de parallélisme, doit être un entier positif.
+
+Les configurations recommandées pour Scrypt sont :
+
+- **N=2^17** (128 Mib), **r=8**, **p=1**
+- **N=2^16** (64 Mib), **r=8**, **p=2**
+- **N=2^15** (32 Mib), **r=8**, **p=3**
+- **N=2^14** (16 Mib), **r=8**, **p=5**
+- **N=2^13** (8 Mib), **r=8**, **p=10**
+
+Ce paramètre de configuration fournit une protection équivalente. La seule différence est un compromis entre l'utilisation du processeur (CPU) et de la mémoire (RAM). Les paramètres de configuration plus élevés utiliseront plus de mémoire mais moins de CPU et inversement.
+
+Scrypt est disponible dans les langages de programmation suivants :
+
+- C# : [Scrypt.NET](https://www.nuget.org/packages/Scrypt.NET/)
+- Go : [golang.org/x/crypto/scrypt](https://pkg.go.dev/golang.org/x/crypto/scrypt)
+- JavaScript : [scrypt](https://www.npmjs.com/package/scrypt)
+- PHP : [scrypt](https://www.php.net/manual/en/function.scrypt.php)
+- Python : [scrypt](https://pypi.org/project/scrypt/)
+- Ruby : [scrypt](https://rubygems.org/gems/scrypt)
+
+</TabItem>
+<TabItem value='bcrypt' label='Bcrypt'>
+La fonction de hashage Bcrypt est le meilleur choix pour les systèmes legacy qui ne prennent pas en charge Argon2id ou Scrypt ou si PBKDF2 est requis pour la conformité FIPS-140.
+
+Le facteur de coût qui ici ne représente que le nombre d'itérations devra être aussi élevé que le permettront les ressources du serveur, avec un minimum de 10. Un facteur de coût de 10 prendra environ 100ms pour calculer le hash sur un ordinateur moderne. Un facteur de coût de 12 prendra environ 400ms.
+
+Bcrypt est disponible dans les langages de programmation suivants :
+
+- C# : [BCrypt.Net-Next](https://www.nuget.org/packages/BCrypt.Net-Next/)
+- Go : [golang.org/x/crypto/bcrypt](https://pkg.go.dev/golang.org/x/crypto/bcrypt)
+- JavaScript : [bcrypt](https://www.npmjs.com/package/bcrypt)
+- PHP : [password_hash](https://www.php.net/manual/en/function.password-hash.php)
+- Python : [bcrypt](https://pypi.org/project/bcrypt/)
+- Ruby : [bcrypt](https://rubygems.org/gems/bcrypt)
+
+#### Limite d'entrées
+
+Bcrypt limite la taille des mots de passe à 72 bytes. Si un mot de passe plus long est fourni, il sera tronqué à 72 bytes. Cela signifie que si un utilisateur entre un mot de passe de 73 bytes, le hash sera calculé avec un mot de passe différent de celui qu'il a entré. Il est recommandé de limiter la taille des mots de passe à 72 bytes pour éviter ce problème.
+
+#### Pré-hachage des mots de passe
+
+Une approche alternative consiste à pré-hacher le mot de passe fourni par l'utilisateur avec avec un algorithme rapide tel que SHA-256, puis à hacher le hachage résultant avec Bcrypt. Cela permet de contourner la limite de 72 bytes de Bcrypt. Il s'agit d'un approche peu recommandée (mais courante) qui **devrait être évitée** en raison de problèmes de gestion des mots de passe et d'autres problèmes lors de la combinaison de deux algorithmes de hachage.
+
+</TabItem>
+<TabItem value='pbkdf2' label='PBKDF2'>
+
+PBKDF2 est recommandé par le NIST et dispose de mises en oeuvre validées par FIPS-140. Il est donc utilisé dans les applications qui doivent être conformes à FIPS-140.
+
+PBKDF2 nécessite de choisir un algorithme de hachage interne tel qu'un HMAC ou une variété d'autres algorithmes de hachage. HMAC-SHA-256 et HMAC-SHA-512 sont les algorithmes de hachage recommandés par le NIST et les plus utilisés.
+
+Le facteur de coût de PBKDF2 est défini par le nombre d'itérations et de dégré de parralélisme, ces dernier doit être défini différemment selon l'algorithme de hachage utilisé :
+
+- **HMAC-SHA-1:** 1 300 000 itérations ou plus
+- **HMAC-SHA-256:** 600 000 itérations ou plus
+- **HMAC-SHA-512:** 210 000 itérations ou plus
+
+#### Parralélisme
+
+- **HMAC-SHA-1:** coût de 10
+- **HMAC-SHA-256:** coût de 5
+- **HMAC-SHA-512:** coût de 2
+
+Ces paramètres de configuration fournissent une protection équivalente.
+
+#### Pré-hachage avec PBKDF2
+
+Quand PBKDF2 est utilisé avec un algorithme HMAC et que les mots de passe sont plus longs que la taille du bloc de la fonction (64 bytes pour SHA-256), le mot de passe est automatiquement pré-haché. Par exemple, le mot de passe "Ceci est un mot de passe qui fais plus que 512 bits qui est la taille du bloc de SHA-256" sera converti en valeur de hachage (en hexadécimal): fa91498c139805af73f7ba275cca071e78d78675027000c99a9925e2ec92eedd.
+
+Une bonne implémentation de PBKDF2 effectuera un pré-hachage avant la phase coûteuse de hachage itératif, mais certaines implémentaions effectuent la conversion à chaque itération. Cela peut rendre le hachage des mots de passe longs et beaucoup plus coûteux que le hachage des mots de passe courts. Si un utilisateur fournit des mots de passe très longs, il existe un vulnérabilité potentielle aux attaques par déni de service (DoS) car le hachage prendra beaucoup plus de temps à calculer, comme celle publiée dans Django en 2013. Le pré-hachage manuel peut réduire ce risque mais nécessite l'ajout d'un sel à l'étape de pré-hachage.
+
+PBKDF2 est disponible dans les langages de programmation suivants :
+
+- C# : [Rfc2898DeriveBytes](https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.rfc2898derivebytes?view=net-5.0)
+- Go : [golang.org/x/crypto/pbkdf2](https://pkg.go.dev/golang.org/x/crypto/pbkdf2)
+- JavaScript : [pbkdf2](https://www.npmjs.com/package/pbkdf2)
+- PHP : [hash_pbkdf2](https://www.php.net/manual/en/function.hash-pbkdf2.php)
+- Python : [pbkdf2](https://pypi.org/project/pbkdf2/)
+- Ruby : [pbkdf2](https://rubygems.org/gems/pbkdf2)
+
+</TabItem>
+</Tabs>
+
+## Conclusion
+
+Les points essentiels à retenir sont :
+
+- Utilisez Argon2id au lieu de Scrypt, Bcrypt ou PBKDF2 si possible.
+- Veillez à ce que les facteurs de coûts des différents algorithmes soient correctement configurés.
+- Veillez à ce que les mots de passe soient salés, même si vous utilisez un poivre.
+- Si possible stockez les sels dans une base de données séparée de celle des mots de passe ou dans un autre système de stockage sécurisé.
+- Veillez à ce que vos poivres soient stockés en toute sécurité.
+- Veillez à ce que les mots de passe soient limités à 72 bytes si vous utilisez Bcrypt.
+- Si possible évitez de pré-hacher les mots de passe avant de les stocker.

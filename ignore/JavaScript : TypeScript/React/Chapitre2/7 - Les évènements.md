@@ -1,0 +1,66 @@
+# 7 – Les évènements
+
+## A – Qu'est-ce qu'un évènement ?
+
+Un évènement pourrait être défini comme un déclencheur d'une ou plusieurs actions opérées par une action de l'utilisateur ou de l'application.
+Par exemple le clic d'un utilisateur, le survol d'un élément par le curseur da la souris de l'utilisateur, le chargement du DOM, etc...
+
+Vous devriez connaître en Javascript la méthode "addEventListener" pour ajouter différents écouteurs d'évènements à un élément du DOM après que celui-ci a été créé. Avec React on fournit directement **l’écouteur** lors du rendu initial de l’élément.
+
+## B – Création d'un évènement
+
+Nous allons maintenant ajouter un bouton à notre page, puis allons lui ajouter l'écouteur d'évènement de click qui se nomme **"onClick"**, par ailleurs tous les écouteurs d'évènements commencent par "on". Dans cet évènement nous allons créer une fonction fléchée anonyme qui appellera une fonction de callback qui affichera "Le bouton a été cliqué !" dans la console :
+
+```tsx title=app.tsx
+class App extends Component {
+	handleLog = () => {
+		console.log("Le bouton a été cliqué !")
+	}
+
+	render = () => (
+		<>
+			<Tilte content='Hello World' />
+			<Clock />
+			<Article>
+				<p>Je suis la propriété children du composant "Article"</p>
+			</Article>
+			<button onClick={() => this.handleLog()}>Cliquer ici !</button>
+		</>
+	)
+}
+```
+
+## C – Récupérer l'objet event d'un évènement
+
+Comme en javascript, il est possible de récupérer l'objet "event" d'un évènement afin d'obtenir plus d'information sur celui-ci tel que l'élément qui a déclenché l'évènement etc...
+
+Pour récupérer cet objet, il suffit simplement de le passer en paramètre de notre fonction fléchée anonyme puis de le récupérer en tant que paramètre dans notre fonction de callback :
+
+```tsx title=app.tsx
+class App extends Component {
+	handleLog = (event: React.MouseEvent) => {
+		console.log(event)
+	}
+
+	render = () => (
+		<>
+			<Tilte content='Hello World' />
+			<Clock />
+			<Article>
+				<p>Je suis la propriété children du composant "Article"</p>
+			</Article>
+			<button onClick={(event) => this.handleLog(event)}>
+				Cliquer ici !
+			</button>
+		</>
+	)
+}
+```
+
+Lorsque vous cliquerez sur le bouton vous loggerez maintenant l'objet event parfois raccourci à "e" bien qu'il soit préférable de ne pas l'utiliser avec cette dernière syntaxe.
+
+:::info
+Vous remarquerez également qu'il est nécessaire de typer l'objet event, en fonction du type d'évènement son typage sera différent, avec VS code, il vous suffira de survoler event dans l'appel de la fonction de callback afin de connaître son type et donc de l'appliquer dans la déclaration de votre fonction.
+
+Si vous ne trouvez cependant pas son type, accéder au fichier index.d.ts de react qui se trouve dans "node_modules/@types/react" puis rechercher le nom de l'évènement en question pour trouver son type.
+:::
