@@ -1,3 +1,6 @@
+CHAP 3
+{/_ Ce chapitre présente quelques concepts de base utilisés en C# relatifs à la compilation et l'exécution d'applications, notamment les notions d'espace de noms (namespaces), d'assembly et de fichiers d'éxécution (exécutables) ou de bibliothèques (libraries). _/}
+
 - [2.1 - Créer un projet en C#](2.1.md)
 - [2.2 - Structure du programme](2.2.md)
 - [2.3 - Syntaxe et types de base en C#](2.3.md)
