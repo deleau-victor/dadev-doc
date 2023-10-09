@@ -92,6 +92,12 @@ const config = {
 						sidebarId: 'php',
 						label: 'PHP',
 					},
+					{
+						type: 'docSidebar',
+						position: 'right',
+						sidebarId: 'typescript',
+						label: 'TypeScript',
+					},
 				],
 			},
 			footer: {
