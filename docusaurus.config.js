@@ -57,7 +57,17 @@ const config = {
 			}),
 		],
 	],
-
+	// plugins: [
+	// 	[
+	// 		'@docusaurus/plugin-content-docs',
+	// 		{
+	// 			id: 'docs-csharp',
+	// 			path: 'docs-csharp',
+	// 			routeBasePath: 'docs-csharp',
+	// 			sidebarPath: require.resolve('./sidebars.js'),
+	// 		},
+	// 	],
+	// ],
 	themeConfig:
 		/** @type {import('@docusaurus/preset-classic').ThemeConfig} */
 		({
@@ -71,9 +81,15 @@ const config = {
 				items: [
 					{
 						type: 'docSidebar',
-						sidebarId: 'tutorialSidebar',
+						sidebarId: 'sidebar',
 						position: 'right',
 						label: 'Documentation',
+					},
+					{
+						type: 'docSidebar',
+						position: 'right',
+						sidebarId: 'csharp',
+						label: 'C#',
 					},
 				],
 			},
@@ -81,13 +97,7 @@ const config = {
 				style: 'dark',
 				links: [
 					{
-						title: 'Documentation',
-						items: [
-							{
-								label: 'C#',
-								to: '/docs/Langages/CSharp',
-							},
-						],
+						title: 'Documentation'
 					},
 				],
 				copyright: `Copyright © ${new Date().getFullYear()} Dadev, Inc. Built with Docusaurus.`,
