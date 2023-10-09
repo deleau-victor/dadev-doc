@@ -17,7 +17,7 @@ function HomepageHeader() {
 				<div className={styles.buttons}>
 					<Link
 						className='button button--secondary button--lg'
-						to='/docs/csharp/csharp/index.mdx'
+						to='/docs/csharp/csharp'
 					>
 						Présentation de C#
 					</Link>
