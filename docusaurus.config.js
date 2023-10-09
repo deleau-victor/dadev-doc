@@ -81,9 +81,9 @@ const config = {
 				items: [
 					{
 						type: 'docSidebar',
-						sidebarId: 'sidebar',
+						sidebarId: 'security',
 						position: 'right',
-						label: 'Documentation',
+						label: 'Sécurité',
 					},
 					{
 						type: 'docSidebar',
@@ -91,13 +91,25 @@ const config = {
 						sidebarId: 'csharp',
 						label: 'C#',
 					},
+					{
+						type: 'docSidebar',
+						position: 'right',
+						sidebarId: 'go',
+						label: 'GO',
+					},
+					{
+						type: 'docSidebar',
+						position: 'right',
+						sidebarId: 'php',
+						label: 'PHP',
+					},
 				],
 			},
 			footer: {
 				style: 'dark',
 				links: [
 					{
-						title: 'Documentation'
+						title: 'Documentation',
 					},
 				],
 				copyright: `Copyright © ${new Date().getFullYear()} Dadev, Inc. Built with Docusaurus.`,
