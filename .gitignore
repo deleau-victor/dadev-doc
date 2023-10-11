@@ -4,6 +4,15 @@
 # Production
 /build
 
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Packages managers config
+.npmrc
+.pnpmfile.cjs
+
 # Generated files
 .docusaurus
 .cache-loader

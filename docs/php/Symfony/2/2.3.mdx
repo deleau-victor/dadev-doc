@@ -1,0 +1,47 @@
+---
+sidebar_position: 3
+sidebar_label: "Modèle d'accès aux données"
+title: "2.3 - Modèle d'accès aux données"
+---
+
+Maintenant que nous avons vu comment créer un modèle de données, nous allons voir comment créer, accéder, modifier et supprimer les données de ce modèle.
+
+## Création d'un repository
+
+Pour créer, accéder, modifier ou supprimer des données, nous allons utiliser un repository. Un repository est une classe qui va nous permettre d'effectuer des opérations sur les données d'un modèle.
+
+Pour cela nous allons reprendre nos modèles `Book` et `Author` du dernier cours et créer un repository pour chacun d'eux.
+
+:::note
+
+Si vous avez utiliser MakerBundle pour créer votre modèle, un repository a été créé automatiquement.
+
+:::
+
+Pour créer un repository, il faut créer une classe qui hérite de `Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository`.
+On injectera dans le constructeur de cette classe le `ManagerRegistry` qui nous permettra d'accéder à l'entity manager.
+
+La classe `ServiceEntityRepository` fournira à notre repository des méthodes de base :
+
+- **`find`** : permet de récupérer un élément par son identifiant
+- **`findAll`** : permet de récupérer tous les éléments
+- **`findOneBy`** : permet de récupérer un élément par un critère
+- **`findBy`** : permet de récupérer plusieurs éléments par un critère
+
+```php title="src/Repository/BookRepository.php"
+<?php
+
+namespace App\Repository;
+
+use App\Entity\Book;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
+
+class BookRepository extends ServiceEntityRepository
+{
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, Book::class);
+    }
+}
+```

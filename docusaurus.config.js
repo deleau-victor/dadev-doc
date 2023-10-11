@@ -9,6 +9,10 @@ const config = {
 	title: 'Dadev Docs',
 	tagline: 'Documentation pour les développeurs',
 	favicon: 'img/dadev.svg',
+	markdown: {
+		mermaid: true,
+	},
+	themes: ['@docusaurus/theme-mermaid'],
 
 	// Set the production url of your site here
 	url: 'https://doc.dadev.fr',
@@ -46,17 +50,6 @@ const config = {
 			}),
 		],
 	],
-	// plugins: [
-	// 	[
-	// 		'@docusaurus/plugin-content-docs',
-	// 		{
-	// 			id: 'docs-csharp',
-	// 			path: 'docs-csharp',
-	// 			routeBasePath: 'docs-csharp',
-	// 			sidebarPath: require.resolve('./sidebars.js'),
-	// 		},
-	// 	],
-	// ],
 	themeConfig:
 		/** @type {import('@docusaurus/preset-classic').ThemeConfig} */
 		({
