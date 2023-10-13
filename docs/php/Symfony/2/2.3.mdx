@@ -4,6 +4,9 @@ sidebar_label: 'Persistence des données'
 title: '2.3 - Persistence des données'
 ---
 
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+
 Maintenant que nous avons vu comment créer un modèle de données, nous allons voir comment créer, accéder, modifier et supprimer les données de ce modèle.
 
 ## Création d'un repository
@@ -20,6 +23,8 @@ Si vous avez utiliser MakerBundle pour créer votre modèle, un repository a ét
 
 Pour créer un repository, il faut créer une classe qui hérite de `Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository`.
 On injectera dans le constructeur de cette classe le `ManagerRegistry` qui nous permettra d'accéder à l'entity manager.
+
+### Les Méthodes de base
 
 La classe `ServiceEntityRepository` fournira à notre repository des méthodes de base :
 
@@ -45,3 +50,82 @@ class BookRepository extends ServiceEntityRepository
     }
 }
 ```
+
+### Créer des méthodes custom
+
+Nous avons vu que les repositories contiennent des méthodes de base, ces méthodes permettent d'avoir rapidement des méthodes essentielles.
+Néanmoins dans le cadre d'un projet, elles ne couvrirons certainement pas tous nos besoins.
+C'est pourquoi, nous allons voir comment implémenter des méthodes personnalisées.
+
+Par exemple: Si l'on veut trouver des auteurs en fonction de leur nom ou prénom puis les ordonner par rapport à leur nom de famille
+
+<Tabs>
+
+<TabItem value='DQL' label='Doctrine Query Language'>
+
+:::note
+Le QueryBuilder n'est pas une abstraction du DQL, mais simplement un outil pour le construire de manière dynamique. Vous devriez toujours utiliser le DQL brut lorsque c'est possible, car il est plus simple et plus lisible.
+:::
+
+```php
+/**
+ * @return Author[]
+ */
+public function findByName(string $letters): array
+{
+    $entityManager = $this->getEntityManager();
+
+    $query = $entityManager->createQuery(
+        'SELECT a FROM App\Entity\Author a
+        WHERE CONCAT(a.firstName, a.lastName) LIKE :letters
+        ORDER BY a.lastName ASC'
+    )
+    ->setParameter('letters', '%'.$letters.'%');
+
+    return $query->getResult();
+}
+```
+
+:::tip
+
+Il existe de nombreuses syntaxes DQL pour faire des requêtes pour voir la documentation [cliquez ici !](https://www.doctrine-project.org/projects/doctrine-orm/en/current/reference/dql-doctrine-query-language.html#doctrine-query-language")
+
+:::
+
+</TabItem>
+
+<TabItem value='QB' label='Query builder'>
+
+```php
+/**
+ * @return Author[]
+ */
+public function findByName(string $letters): array
+{
+    $entityManager = $this->getEntityManager();
+    $queryBuilder = $entityManager->createQueryBuilder();
+
+    $queryBuilder
+    ->select(array('a'))
+    ->from('App\Entity\Author', 'a')
+    ->where($queryBuilder->expr()->orX(
+        $queryBuilder->expr()->like('a.lastName', '?1'),
+        $queryBuilder->expr()->like('a.firstName', '?1')
+    ))
+    ->orderBy('a.lastName', 'ASC')
+    ->setParameter(1, $letters);
+
+    $query = $queryBuilder ->getQuery();
+    return $query->execute();
+}
+```
+
+:::tip
+
+Il existe de nombreuses syntaxes pour le QueryBuilder pour faire des requêtes pour voir la documentation [cliquez ici !](https://www.doctrine-project.org/projects/doctrine-orm/en/current/reference/query-builder.html)
+
+:::
+
+</TabItem>
+
+</Tabs>
