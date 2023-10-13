@@ -1,0 +1,69 @@
+---
+sidebar_position: 4
+sidebar_label: 'Controller'
+title: '2.4 Les controllers'
+---
+
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+
+## Créer un Controller
+
+<Tabs>
+<TabItem value='makerBundle' label='Avec MakerBundle'>
+Grâce au MakerBundle il vous suffit de faire la commande suivante:
+
+```bash
+$ php bin/console make:controller
+
+# Entrez le nom du controller
+
+Choose a name for your controller class (e.g. NomEntitéController):
+
+> AuthorController
+
+# emplacement du controller qui vient d'être créée
+
+created: src/Controller/AuthorController.php
+
+Success!
+
+```
+
+</TabItem>
+
+<TabItem value='scratch' label='Sans MakerBundle' default>
+Pour créer un Controller il faut:
+
+1. Tout d'abord il faut créer un fichier `NomEntitéController.php` dans le dossier `./src/Controller`
+2. créer une class qui hérite de `Symfony\Bundle\FrameworkBundle\Controller\AbstractController;`
+
+```php title='./src/Controller/AuthorController.php'
+<?php
+
+namespace App\Controller;
+
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+
+
+use Symfony\Component\HttpFoundation\JsonResponse;
+
+// Selon votre system de route
+use Symfony\Component\Routing\Annotation\Route;
+
+class AuthorController extends AbstractController
+{
+    #[Route('/author', name: 'app_author')]
+    public function index(): JsonResponse
+    {
+        return $this->json([
+            'message' => 'Welcome to your new controller!',
+            'path' => 'src/Controller/AuthorController.php',
+        ]);
+    }
+}
+```
+
+</TabItem>
+
+</Tabs>
