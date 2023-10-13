@@ -1,0 +1,120 @@
+---
+sidebar_position: 2
+sidebar_label: "Création d'un projet symfony"
+title: "1.2 - Création d'un projet symfony"
+---
+
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+
+Après avoir mis en place notre environnement de développement, nous allons maintenant créer notre projet Symfony.
+
+## Création d'un projet Symfony
+
+Pour créer un projet Symfony, il existe deux méthodes :
+
+- Via le Symfony CLI
+- Via Composer
+
+Par défaut il vaut mieux utiliser le Symfony CLI, mais si vous ne l'avez pas, vous pouvez utiliser Composer.
+
+Deux principaux types d'application Symfony sont disponibles :
+
+- Les applications **simples**, qui utilisent Symfony pour créer des **API** et des microservices
+- Les applications **Web**, qui utilisent Symfony pour générer des **pages Web avec Twig**
+
+<Tabs>
+
+<TabItem value='symfonyCLI' label='Symfony CLI' default>
+
+```bash
+# Création d'un projet Symfony simple
+symfony new $app_name
+
+# Création d'un projet Symfony avec Twig
+symfony new $app_name --webapp
+```
+
+</TabItem>
+
+<TabItem value='composer' label='Composer'>
+
+```bash
+# Création d'un projet Symfony simple avec composer
+composer create-projet symfony/skeleton:"$symfony_version" $app_name
+
+#  Création d'un projet Symfony avec Twig avec composer
+composer create-projet symfony/skeleton:"$symfony_version" $app_name
+cd $app_name
+composer require webapp
+```
+
+</TabItem>
+
+</Tabs>
+
+## Démarrer un projet Symfony existant
+
+Si vous avez récupérer un projet Symfony existant, il faut d'abord installer les dépendances avec Composer :
+
+```bash
+git clone $project_url
+cd $project_name
+composer install
+```
+
+## Éxecuter le projet Symfony
+
+Maintenant que nous avons un projet Symfony, nous allons pouvoir l'éxecuter.
+
+Pour cela vous pouvez utilisez le CLI de Symfony ou une commande PHP.
+
+<Tabs>
+
+<TabItem value='symfony' label='Symfony CLI' default>
+
+Pour éxecuter le projet Symfony avec le CLI de Symfony, il suffit d'utiliser l'une des commandes suivante :
+
+```bash
+# Démarrer le serveur web
+symfony serve
+
+# Démarrer le serveur web sur un port spécifique
+symfony serve -d --port $port
+```
+
+Il est également possible de démarrer le serveur web en HTTPS. Pour cela il vous faudra préalablement générer un certificat SSL.
+
+Cela est facilement réalisable avec le CLI de Symfony :
+
+```bash
+# Générer un certificat SSL
+symfony server:ca:install
+```
+
+Il ne vous restera plus qu'à démarrer le serveur web, celui-ci sera automatiquement en HTTPS.
+
+:::tip Désactiver le HTTPS
+
+Si vous souhaitez désactiver le HTTPS, il vous suffit d'ajouter l'option `--no-tls` à la commande `symfony serve`.
+
+:::
+
+</TabItem>
+
+<TabItem value='php' label='Commande PHP'>
+
+Pour éxecuter le projet Symfony avec PHP, il faut utiliser la commande suivante :
+
+```bash
+# Démarrer le serveur web sur un port spécifique
+php -S 127.0.0.1:$port -t public
+```
+
+</TabItem>
+
+</Tabs>
+
+Pour arrêter le serveur web, il suffit d'utiliser cette combinaison de touche dans le terminal :
+
+<kbd>Ctrl</kbd> + <kbd>C</kbd>

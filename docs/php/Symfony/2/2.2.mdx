@@ -172,66 +172,91 @@ Pour créer une entité, il faut créer une classe PHP dans le dossier `src/Enti
 
 Cette entité doit être annotée avec `Doctrine\ORM\Mapping\Entity` et optionnellement avec `Doctrine\ORM\Mapping\Table` pour spécifier le nom de la table dans la base de données.
 
-Chaque propriété de la classe doit être annotée avec `Doctrine\ORM\Mapping\Column` et doit avoir un getter et un setter.
+Chaque propriété de la classe doit être annotée avec `Doctrine\ORM\Mapping\Column` accompagné de son type pour certains.
+
+les types de propriétés sont les suivants :
+
+<Tabs>
+
+<TabItem value='typesPrincipaux' label='Types Principaux' default>
+
+| Type de propriété | Description                | Options                          | Exemple d'annotation                   |
+| ----------------- | -------------------------- | -------------------------------- | -------------------------------------- |
+| **`string`**      | Chaîne de caractères       | `length` : Longueur de la chaîne | `#[ORM\Column(length: 255)]`           |
+| **`text`**        | Chaîne de caractères       |                                  | `#[ORM\Column(type: Types::TEXT)]`     |
+| **`boolean`**     | Booléen                    |                                  | `#[ORM\Column]`                        |
+| **`integer`**     | Entier                     |                                  | `#[ORM\Column]`                        |
+| **`smallint`**    | Entier                     |                                  | `#[ORM\Column(type: Types::SMALLINT)]` |
+| **`bigint`**      | Entier                     |                                  | `#[ORM\Column(type: Types::BIGINT)]`   |
+| **`float`**       | Nombre à virgule flottante |                                  | `#[ORM\Column]`                        |
+
+</TabItem>
+
+<TabItem value='objetsEtTableaux' label='Objets et tableaux'>
+
+| Type de propriété  | Description | Exemple d'annotation                       |
+| ------------------ | ----------- | ------------------------------------------ |
+| **`array`**        | Tableau     | `#[ORM\Column(type: Types::ARRAY)]`        |
+| **`simple_array`** | Tableau     | `#[ORM\Column(type: Types::SIMPLE_ARRAY)]` |
+| **`json`**         | JSON        | `#[ORM\Column]`                            |
+| **`object`**       | Objet       | `#[ORM\Column(type: Types::OBJECT)]`       |
+| **`binary`**       | Binaire     | `#[ORM\Column(type: Types::BINARY)]`       |
+| **`blob`**         | Binaire     | `#[ORM\Column(type: Types::BLOB)]`         |
+
+</TabItem>
+
+<TabItem value='datesEtHeures' label='Dates et heures'>
+
+| Type de propriété  | Description               | Exemple d'annotation                             |
+| ------------------ | ------------------------- | ------------------------------------------------ |
+| **`date`**         | Date                      | `#[ORM\Column(type: Types::DATE_MUTABLE)]`       |
+| **`datetime`**     | Date et heure             | `#[ORM\Column(type: Types::DATETIME_MUTABLE)]`   |
+| **`datetimetz`**   | Date et heure avec fuseau | `#[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]` |
+| **`time`**         | Heure                     | `#[ORM\Column(type: Types::TIME_MUTABLE)]`       |
+| **`dateinterval`** | Intervalle de date        | `#[ORM\Column]`                                  |
+
+</TabItem>
+
+<TabItem value='autresTypes' label='Autres types'>
+
+| Type de propriété  | Description          | Options                                                                 | Exemple d'annotation                                           |
+| ------------------ | -------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **`guid`**         | GUID                 |                                                                         | `#[ORM\Column(type: Types::GUID)]`                             |
+| **`decimal`**      | Nombre décimal       | `precision` : Précision de la valeur<br/>`scale` : Echelle de la valeur | `#[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]` |
+| **`ascii_string`** | Chaîne de caractères |                                                                         | `#[ORM\Column(type: Types::ASCII_STRING)]`                     |
+
+</TabItem>
+
+</Tabs>
+
+Créons maintenant nos deux entités `Book` et `Author` :
 
 ```php title="src/Entity/Book.php"
 <?php
 
-namespace App\Entity;
-
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\DBAL\Types\Types;
 
+// Annotation pour spécifier que la classe est une entité
 #[ORM\Entity]
-#[ORM\Table(name: "Book")]
 class Book
 {
+    // Indique que la propriété est la clé primaire
     #[ORM\Id]
+    // Indique que la valeur de la clé primaire est générée automatiquement
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: "integer")]
-    private $id;
+    #[ORM\Column]
+    public ?int $id = null;
 
+    // Propriété de type string avec une longueur de 255 caractères
     #[ORM\Column(length: 255)]
-    private $title;
+    public ?string $title = null;
 
-    #[ORM\Column(length: 2000)]
-    private $description;
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function getTitle(): ?string
-    {
-        return $this->title;
-    }
-
-    public function setTitle(string $title): self
-    {
-        $this->title = $title;
-
-        return $this;
-    }
-
-    public function getDescription(): ?string
-    {
-        return $this->description;
-    }
-
-    public function setDescription(string $description): self
-    {
-        $this->description = $description;
-
-        return $this;
-    }
+    // Propriété de type TEXT
+    #[ORM\Column(type: Types::TEXT)]
+    public ?string $description = null;
 }
 ```
-
-:::tip
-
-Il existe de nombreuses annotations pour définir les propriétés de la classe, vous pouvez les retrouver dans la [documentation de Doctrine](https://www.doctrine-project.org/projects/doctrine-orm/en/2.9/reference/annotations-reference.html)
-
-:::
 
 ```php title="src/Entity/Author.php"
 <?php
@@ -240,51 +265,19 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 
-
 #[ORM\Entity]
-#[ORM\Table(name: "Author")]
 class Author
 {
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: "integer")]
-    private $id;
+    #[ORM\Column]
+    public ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    private $firstName;
+    public ?string $firstName = null;
 
     #[ORM\Column(length: 255)]
-    private $lastName;
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function getFirstName(): ?string
-    {
-        return $this->firstName;
-    }
-
-    public function setFirstName(string $firstName): self
-    {
-        $this->firstName = $firstName;
-
-        return $this;
-    }
-
-    public function getLastName(): ?string
-    {
-        return $this->lastName;
-    }
-
-    public function setLastName(string $lastName): self
-    {
-        $this->lastName = $lastName;
-
-        return $this;
-    }
+    public ?string $lastName = null;
 }
 ```
 
@@ -348,111 +341,207 @@ Vous voici maintenant avec deux entités qui sont liées entre elles.
 
 <TabItem value='scratch' label='Sans MakerBundle'>
 
-Pour réaliser la relation `un à plusieurs` entre les entités `Book` et `Author`, il faut ajouter une propriété `author` dans la classe `Book` et une propriété `books` dans la classe `Author`.
+Pour réaliser nos relations nous auront besoin d'ajouter des propriétés dans nos entités et de les annoter.
 
-:::info Rappel sur les relations
+Il existe deux type d'annotation pour réaliser des relations :
 
-Il existe 4 types de relations entre les entités :
+- **Les annotations de relation**, elles servent à spécifier le type de relation et les options de la relation
+- **Les annotations de jointure** elles servent à spécifier les colonnes de jointure.
+  Elles ne sont utilisées que dans deux cas spécifique :
+  - Lorsque la relation est de type `ManyToMany` ou `OneToMany`
+  - Lorsque la relation est de type `ManyToOne` ou `OneToOne` et l'entité liée possède plusieurs clés primaires
 
-| Relation         | Notation | Description                                      | Exemple                                |
-| ---------------- | -------- | ------------------------------------------------ | -------------------------------------- |
-| **`OneToOne`**   | **1:1**  | Une entité est liée à une seule autre entité     | Un utilisateur a un seul profil        |
-| **`OneToMany`**  | **1:n**  | Une entité est liée à plusieurs entités          | Un auteur a écrit plusieurs livres     |
-| **`ManyToOne`**  | **n:1**  | Plusieurs entités sont liées à une entité        | Plusieurs livres ont un seul auteur    |
-| **`ManyToMany`** | **n:n**  | Plusieurs entités sont liées à plusieurs entités | Plusieurs livres ont plusieurs auteurs |
+Toutes les annotation de relations disposent des options suivantes :
 
-:::
+- **`fetch`** : Permet de spécifier la stratégie de récupération des entités liées
+  - `LAZY` : Les entités liées ne sont récupérées que lorsque vous accédez à la propriété
+  - `EAGER` : Les entités liées sont récupérées en même temps que l'entité courante
+- **`cascade`** : Permet de spécifier les opérations qui doivent être propagées aux entités liées
+  - `persist` : Permet de persister les entités liées
+  - `remove` : Permet de supprimer les entités liées
+  - `merge` : Permet de fusionner les entités liées
+  - `detach` : Permet de détacher les entités liées
+  - `refresh` : Permet de rafraîchir les entités liées
+  - `all` : Permet de propager toutes les opérations
 
-De la même manière qu'avec les propriétés, il faut fournir un getter et un setter pour chaque relation.
+Voici donc un récapitulatif des annotations de relation :
 
-Il faut également annoter les propriétés avec `Doctrine\ORM\Mapping\ManyToOne` pour la relation `n:1` et `Doctrine\ORM\Mapping\OneToMany` pour la relation `1:n`.
+<Tabs>
+
+<TabItem value='OneToMany' label='One To Many' default>
+
+Pour créer une relation `OneToMany` entre deux entités, il faut ajouter une propriété dans l'entité qui contiendra plusieurs entités et l'annoter avec `Doctrine\ORM\Mapping\OneToMany`.
+
+**`[ORM/OneToMany]`** permet de spécifier le type de relation et les options de la relation :
+
+- Champ requis :
+  - targetEntity : Le nom de l'entité liée
+- Champs optionnels :
+  - inversedBy : Le nom de la propriété dans l'entité liée qui contiendra les entités de l'entité courante
+  - mappedBy : Le nom de la propriété dans l'entité courante qui contiendra les entités de l'entité liée
+  - indexBy : Le nom de la propriété dans l'entité liée qui sera utilisée comme index pour les entités de l'entité courante
+  - orphanRemoval : Permet de supprimer l'entité liée lorsque l'entité courante est supprimée
+
+Voici un exemple de relation `OneToMany` entre les entités `Book` et `Author` :
+
+```php title="src/Entity/Author.php"
+<?php
+
+use Doctrine\ORM\Mapping as ORM;
+
+class Author
+{
+    #[ORM\OneToMany(targetEntity: Book::class, mappedBy: 'author')]
+    public ?Collection $books = null;
+}
+```
 
 ```php title="src/Entity/Book.php"
 <?php
 
-namespace App\Entity;
+use Doctrine\ORM\Mapping as ORM;
+
+class Book
+{
+    #[ORM\ManyToOne(targetEntity: Author::class, inversedBy: 'books')]
+    public ?Author $author = null;
+}
+```
+
+</TabItem>
+
+<TabItem value='ManyToMany' label='Many To Many'>
+
+Pour créer une relation `ManyToMany` entre deux entités, il faut ajouter une propriété dans chaque entité et les annoter avec `Doctrine\ORM\Mapping\ManyToMany` et `Doctrine\ORM\Mapping\JoinTable`.
+
+**`[ORM/JoinTable]`** permet de créer une table de jointure entre les deux entités, il faut alors spécifier :
+
+- **`name`** : Le nom de la table de jointure
+- **`joinColumns`** : Les colonnes de jointure de l'entité courante
+- **`inverseJoinColumns`** : Les colonnes de jointure de l'entité liée
+
+**`[ORM/ManyToMany]`** permet de spécifier le type de relation et les options de la relation :
+
+- Champ requis :
+  - targetEntity : Le nom de l'entité liée
+- Champs optionnels :
+  - inversedBy : Le nom de la propriété dans l'entité liée qui contiendra les entités de l'entité courante
+  - mappedBy : Le nom de la propriété dans l'entité courante qui contiendra les entités de l'entité liée
+  - indexBy : Le nom de la propriété dans l'entité liée qui sera utilisée comme index pour les entités de l'entité courante
+
+Voici un exemple de relation `ManyToMany` entre les entités `Book` et `Author` :
+
+```php title="src/Entity/Book.php"
+<?php
 
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity]
-#[ORM\Table(name: "Book")]
 class Book
 {
-    //...
-
-    #[ORM\ManyToOne(targetEntity: "App\Entity\Author", inversedBy: "books")]
-    #[ORM\JoinColumn(nullable: false)]
-    private $author;
-
-    // ...
-
-    public function getAuthor(): ?Author
-    {
-        return $this->author;
-    }
-
-    public function setAuthor(?Author $author): self
-    {
-        $this->author = $author;
-
-        return $this;
-    }
+    #[ORM\JoinTable(
+        name: 'author_book',
+        joinColumns: ['name' => 'book_id','referencedColumnName' => 'id',],
+        inverseJoinColumns: ['name' => 'author_id','referencedColumnName' => 'id',]
+    )]
+    #[ORM\ManyToMany(targetEntity: Author::class, inversedBy: 'books')]
+    public ?Collection $authors = null;
 }
 ```
 
 ```php title="src/Entity/Author.php"
 <?php
 
-namespace App\Entity;
-
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity]
-#[ORM\Table(name: "Author")]
 class Author
 {
-    // ...
-
-    #[ORM\OneToMany(targetEntity: "App\Entity\Book", mappedBy: "author")]
-    private $books;
-
-    // ...
-
-    public function getBooks(): Collection
-    {
-        return $this->books;
-    }
-
-    public function addBook(Book $book): self
-    {
-        if (!$this->books->contains($book)) {
-            $this->books[] = $book;
-            $book->setAuthor($this);
-        }
-
-        return $this;
-    }
-
-    public function removeBook(Book $book): self
-    {
-        if ($this->books->contains($book)) {
-            $this->books->removeElement($book);
-            // set the owning side to null (unless already changed)
-            if ($book->getAuthor() === $this) {
-                $book->setAuthor(null);
-            }
-        }
-
-        return $this;
-    }
+    #[ORM\ManyToMany(targetEntity: Book::class, mappedBy: 'authors')]
+    public ?Collection $books = null;
 }
 ```
 
-:::tip
+</TabItem>
 
-Il existe de nombreuses annotations pour définir les relations entre les entités, vous pouvez les retrouver dans la [documentation de Doctrine](https://www.doctrine-project.org/projects/doctrine-orm/en/2.9/reference/annotations-reference.html)
+<TabItem value='OneToOne' label='One To One'>
 
-:::
+Pour créer une relation `OneToOne` entre deux entités, il faut ajouter une propriété dans chaque entité et les annoter avec `Doctrine\ORM\Mapping\OneToOne`.
+
+**`[ORM/OneToOne]`** permet de spécifier le type de relation et les options de la relation :
+
+- Champ requis :
+  - targetEntity : Le nom de l'entité liée
+- Champs optionnels :
+  - inversedBy : Le nom de la propriété dans l'entité liée qui contiendra l'entité de l'entité courante
+  - orphanRemoval : Permet de supprimer l'entité liée lorsque l'entité courante est supprimée
+
+Voici un exemple de relation `OneToOne` entre les entités `Book` et `Author` :
+
+```php title="src/Entity/Book.php"
+<?php
+
+use Doctrine\ORM\Mapping as ORM;
+
+class Book
+{
+    #[ORM\OneToOne(targetEntity: Author::class, inversedBy: 'book')]
+    public ?Author $author = null;
+}
+```
+
+```php title="src/Entity/Author.php"
+<?php
+
+use Doctrine\ORM\Mapping as ORM;
+
+class Author
+{
+    #[ORM\OneToOne(targetEntity: Book::class)]
+    public ?Book $book = null;
+}
+```
+
+</TabItem>
+
+<TabItem value='ManyToOne' label='Many To One'>
+
+Pour créer une relation `ManyToOne` entre deux entités, il faut ajouter une propriété dans l'entité qui contiendra plusieurs entités et l'annoter avec `Doctrine\ORM\Mapping\ManyToOne`.
+
+**`[ORM/ManyToOne]`** permet de spécifier le type de relation et les options de la relation :
+
+- Champ requis :
+  - targetEntity : Le nom de l'entité liée
+- Champs optionnels :
+  - inversedBy : Le nom de la propriété dans l'entité liée qui contiendra les entités de l'entité courante
+
+Voici un exemple de relation `ManyToOne` entre les entités `Book` et `Author` :
+
+```php title="src/Entity/Book.php"
+<?php
+
+use Doctrine\ORM\Mapping as ORM;
+
+class Book
+{
+    #[ORM\ManyToOne(targetEntity: Author::class, inversedBy: 'books')]
+    public ?Author $author = null;
+}
+```
+
+```php title="src/Entity/Author.php"
+<?php
+
+use Doctrine\ORM\Mapping as ORM;
+
+class Author
+{
+    #[ORM\OneToMany(targetEntity: Book::class, mappedBy: 'author')]
+    public ?Collection $books = null;
+}
+```
+
+</TabItem>
+
+</Tabs>
 
 </TabItem>
 
