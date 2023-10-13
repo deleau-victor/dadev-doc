@@ -7,7 +7,153 @@ title: '2.3 - Persistence des données'
 import Tabs from '@theme/Tabs'
 import TabItem from '@theme/TabItem'
 
-Maintenant que nous avons vu comment créer un modèle de données, nous allons voir comment créer, accéder, modifier et supprimer les données de ce modèle.
+Maintenant que nous avons créé un modèle de données, nous allons voir comment créer, accéder, modifier et supprimer les données de ce modèle.
+
+:::note
+
+Si vous utilisez MakerBundle, vous pouvez passer directement à la section [Création d'un repository](#création-dun-repository)
+
+:::
+
+## Modèle de gestion d'erreur
+
+Avant de commencer à créer nos repositories, nous allons créer des modèles de gestion d'erreur.
+
+Pour cela, nous allons commencer par créer une classe abstraite `ApplicationException` dans le dossier `src/Common/Exceptions` qui va hériter de la classe `Exception` de PHP.
+
+Cette classe va nous permettre de créer des exceptions personnalisées qui hériteront de cette classe.
+
+```php title="src/Common/Exceptions/ApplicationException.php"
+<?php
+
+namespace App\Common\Exceptions;
+
+use Exception;
+
+abstract class ApplicationException extends Exception
+{
+
+   protected function __construct(string $title, string $message)
+    {
+         parent::__construct($message);
+         $this->title = $title;
+    }
+
+   public string $title;
+}
+```
+
+Nous allons ensuite créer nos modèles d'exceptions personnalisées tels que :
+
+- **`NotFoundException`**
+- **`BadRequestException`**
+- **`ValidationException`**
+- **`etc...`**
+
+Nous allons réaliser ces trois exemples, vous pourrez en créer d'autres en fonction de vos besoins.
+
+```php title="src/Common/Exceptions/NotFoundException.php"
+<?php
+
+namespace App\Common\Exceptions;
+
+class NotFoundException extends ApplicationException
+{
+
+   public function __construct(string $message)
+   {
+      parent::__construct("Not Found", $message);
+   }
+}
+```
+
+```php title="src/Common/Exceptions/BadRequestException.php"
+<?php
+
+namespace App\Common\Exceptions;
+
+class BadRequestException extends ApplicationException
+{
+
+   public function __construct(string $message)
+   {
+      parent::__construct("Bad Request", $message);
+   }
+}
+```
+
+```php title="src/Common/Exceptions/ValidationException.php"
+<?php
+
+namespace App\Common\Exceptions;
+
+class ValidationException extends ApplicationException
+{
+
+   public function __construct(array $errorsDictionary)
+   {
+      parent::__construct("Validation Failure", "One or more validation errors occurred");
+      $this->errorsDictionary = $errorsDictionary;
+   }
+
+   public $errorsDictionary;
+
+}
+```
+
+## Création d'un mappeur de données
+
+Avant de commancer à créer nos repository, nous allons créer un mappeur de données. Un mappeur de données est une classe qui va nous permettre de convertir des données d'un modèle en données d'un autre modèle s'ils ont la même structure.
+
+Nous l'utiliseront notamment pour convertir nos DTOs en entités et inversement.
+
+Pour cela, nous allons créer une classe `AutoMapper` dans le dossier `src/Common/Mapper` qui va implémenter les méthodes suivantes :
+
+- **`map`** : permet de convertir un objet en un autre objet
+- **`mapCollection`** : permet de convertir une collection d'objets en une collection d'autres objets
+
+```php title="src/Common/Mapper/AutoMapper.php"
+<?php
+
+namespace App\Common\Mapper;
+
+class AutoMapper
+{
+    // Le nom de la classe de destination sous la forme `Entity::class`
+    private string $destinationClass;
+
+    public function __construct(string $destinationClass)
+    {
+        $this->destinationClass = $destinationClass;
+    }
+
+    // Convertit un objet en un autre objet
+    public function map(object $source): object
+    {
+        // On instancie un objet de la classe de destination
+        $destination = new $this->destinationClass();
+        // On parcourt les propriétés de l'objet de destination
+        foreach ($destination as $key => $value) {
+            // Si la propriété existe dans l'objet source elle est copiée dans l'objet destination
+            if (property_exists($source, $key)) {
+                $destination->$key = $source->$key;
+            }
+        }
+
+        return $destination;
+    }
+
+    // Convertit une collection d'objets en une collection d'autres objets
+    public function mapCollection(array $source): array
+    {
+        $destination = [];
+        foreach ($source as $item) {
+            $destination[] = $this->map($item);
+        }
+        return $destination;
+    }
+}
+```
 
 ## Création d'un repository
 
@@ -15,14 +161,114 @@ Pour créer, accéder, modifier ou supprimer des données, nous allons utiliser 
 
 Pour cela nous allons reprendre nos modèles `Book` et `Author` du dernier cours et créer un repository pour chacun d'eux.
 
-:::note
+<Tabs>
+
+<TabItem value='makerBundle' label='Avec MakerBundle' default>
 
 Si vous avez utiliser MakerBundle pour créer votre modèle, un repository a été créé automatiquement.
 
-:::
+</TabItem>
 
-Pour créer un repository, il faut créer une classe qui hérite de `Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository`.
-On injectera dans le constructeur de cette classe le `ManagerRegistry` qui nous permettra d'accéder à l'entity manager.
+<TabItem value='sansMakerBundle' label='Sans MakerBundle'>
+
+Sans MakerBundle, nous allons créer un repository générique pour nous aider à créer les repositories de nos modèles.
+
+Cette classe implémentera des méthodes de base pour nos repositories. Cela nous permettra de ne pas avoir à dupliquer du code.
+
+Les méthodes que nous implémenterons sont :
+
+- **`getAll`** : permet de récupérer tous les éléments
+- **`getById`** : permet de récupérer un élément par son identifiant
+- **`deleteById`** : permet de supprimer un élément par son identifiant
+
+Nous n'implémenterons pas la méthode `create` car elle susceptible de différer en fonction du modèle, notamment si celui-ci contient des relations.
+
+Ce repository fournira une instance d'un autoMapper que l'on initialisera avec le modèle de référence du repository, il fournira également l'instance courante de l'entityManager.
+
+Pour cela, nous allons créer une classe `AppRepository` dans le dossier `src/Repository` qui va hériter de la classe `ServiceEntityRepository` de Doctrine.
+
+```php title="src/Repository/AppRepository.php"
+<?php
+
+namespace App\Repository;
+
+use App\Common\Exceptions\NotFoundException;
+use App\Common\Mapper\AutoMapper;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\EntityManager;
+use Doctrine\Persistence\ManagerRegistry;
+
+class AppRepository extends ServiceEntityRepository
+{
+   protected AutoMapper $mapper;
+   protected EntityManager $entityManager;
+   private string $entityClass;
+
+   protected function __construct(ManagerRegistry $registry, $entityClass)
+   {
+      parent::__construct($registry, $entityClass);
+      $this->mapper = new AutoMapper($entityClass);
+      $this->entityManager = $this->getEntityManager();
+      $this->entityClass = $entityClass;
+   }
+
+   public function getById($id)
+   {
+       $entity = $this->find($id);
+       if (!$entity) {
+           throw new NotFoundException("{$this->entityClass} with id $id not found");
+       }
+       return $entity;
+   }
+
+   public function getAll() {
+      return $this->findAll();
+   }
+
+   public function delete($id)
+   {
+       $entity = $this->getById($id);
+       $this->getEntityManager()->remove($entity);
+       $this->getEntityManager()->flush();
+   }
+}
+```
+
+Maintenant que nous avons créé notre repository générique, nous allons créer un repository pour notre modèle `Author`.
+
+Pour cela, nous allons créer une classe `AuthorRepository` dans le dossier `src/Repository` qui va hériter de la classe `AppRepository` que nous venons de créer.
+Notre repository bénéfieciera donc des méthodes de base implémentées dans `AppRepository` auquel nous allons ajouter une méthode `create`.
+
+```php title="src/Repository/AuthorRepository.php"
+<?php
+
+use App\Entity\Author;
+use App\Dto\Book\CreateBookDto;
+use Doctrine\Persistence\ManagerRegistry;
+
+class AuthorRepository extends AppRepository
+{
+
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, Author::class);
+    }
+
+    // Création d'un auteur
+    public function create (Author $author)
+    {
+        // On fait persister notre donnée dans le contexte de Doctrine.
+        $this->entityManager->persist($author);
+        // On enregistre le changement du contexte dans la base de données.
+        $this->entityManager->flush();
+        return $author;
+    }
+}
+```
+
+</TabItem>
+
+</Tabs>
 
 ### Les Méthodes de base
 
