@@ -167,6 +167,15 @@ Pour cela nous allons reprendre nos modèles `Book` et `Author` du dernier cours
 
 Si vous avez utiliser MakerBundle pour créer votre modèle, un repository a été créé automatiquement.
 
+Le repository est créé dans le dossier `src/Repository` et porte le nom du modèle suivi de `Repository`, ces repository héritent de la classe `ServiceEntityRepository` de Doctrine.
+
+La classe `ServiceEntityRepository` fournira à vos repository des méthodes de base :
+
+- **`find`** : permet de récupérer un élément par son identifiant
+- **`findAll`** : permet de récupérer tous les éléments
+- **`findOneBy`** : permet de récupérer un élément par un critère
+- **`findBy`** : permet de récupérer plusieurs éléments par un critère
+
 </TabItem>
 
 <TabItem value='sansMakerBundle' label='Sans MakerBundle'>
@@ -266,18 +275,31 @@ class AuthorRepository extends AppRepository
 }
 ```
 
-</TabItem>
+Maintenant que nous avons créé notre repository pour notre modèle `Author`, nous allons créer un repository pour notre modèle `Book`.
 
-</Tabs>
+Nous allons ici implémenter la méthode create comme pour notre modèle `Author`, cependant ici, nous allons tout d'abord créer un DTO (Data Transfer Object).
+Ce DTO correspond à un modèle de données que l'on souhaite pour créer un livre, ici, nous avons besoin des informations pour créer un livre mais également de l'identifiant de l'auteur qui l'a écrit.
 
-### Les Méthodes de base
+Pour cela, nous allons créer une classe `CreateBookDto` dans le dossier `src/Dto/Book` qui va contenir les propriétés suivantes :
 
-La classe `ServiceEntityRepository` fournira à notre repository des méthodes de base :
+- **`title`** : le titre du livre
+- **`description`** : la description du livre
+- **`authorId`** : l'identifiant de l'auteur du livre
 
-- **`find`** : permet de récupérer un élément par son identifiant
-- **`findAll`** : permet de récupérer tous les éléments
-- **`findOneBy`** : permet de récupérer un élément par un critère
-- **`findBy`** : permet de récupérer plusieurs éléments par un critère
+```php title="src/Dto/Book/CreateBookDto.php"
+<?php
+
+namespace App\Dto\Book;
+
+class CreateBookDto
+{
+   public ?string $title = null;
+   public ?string $description = null;
+   public ?int $author_id = null;
+}
+```
+
+Nous allons ensuite créer notre repository `BookRepository` dans le dossier `src/Repository` qui va hériter de la classe `AppRepository` que nous venons de créer.
 
 ```php title="src/Repository/BookRepository.php"
 <?php
@@ -285,92 +307,157 @@ La classe `ServiceEntityRepository` fournira à notre repository des méthodes d
 namespace App\Repository;
 
 use App\Entity\Book;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use App\Dto\Book\CreateBookDto;
 use Doctrine\Persistence\ManagerRegistry;
 
-class BookRepository extends ServiceEntityRepository
+class BookRepository extends AppRepository
 {
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Book::class);
     }
+
+    public function create(CreateBookDto $dto)
+    {
+        // On map notre DTO vers une entité Book
+        $book = $this->mapper->map($dto);
+        // On récupère l'auteur par son identifiant
+        $book->author = $this->entityManager->getReference('App\Entity\Author', $dto->author_id);
+        // On fait persister notre donnée dans le contexte de Doctrine.
+        $this->getEntityManager()->persist($book);
+        // On enregistre le changement du contexte dans la base de données.
+        $this->getEntityManager()->flush();
+        return $book;
+    }
+
+    public function getByAuthor($authorId)
+    {
+        $books = $this->findBy(['author_id' => $authorId]);
+        return $books;
+    }
 }
 ```
-
-### Créer des méthodes custom
-
-Nous avons vu que les repositories contiennent des méthodes de base, ces méthodes permettent d'avoir rapidement des méthodes essentielles.
-Néanmoins dans le cadre d'un projet, elles ne couvrirons certainement pas tous nos besoins.
-C'est pourquoi, nous allons voir comment implémenter des méthodes personnalisées.
-
-Par exemple: Si l'on veut trouver des auteurs en fonction de leur nom ou prénom puis les ordonner par rapport à leur nom de famille
-
-<Tabs>
-
-<TabItem value='DQL' label='Doctrine Query Language'>
-
-:::note
-Le QueryBuilder n'est pas une abstraction du DQL, mais simplement un outil pour le construire de manière dynamique. Vous devriez toujours utiliser le DQL brut lorsque c'est possible, car il est plus simple et plus lisible.
-:::
-
-```php
-/**
- * @return Author[]
- */
-public function findByName(string $letters): array
-{
-    $entityManager = $this->getEntityManager();
-
-    $query = $entityManager->createQuery(
-        'SELECT a FROM App\Entity\Author a
-        WHERE CONCAT(a.firstName, a.lastName) LIKE :letters
-        ORDER BY a.lastName ASC'
-    )
-    ->setParameter('letters', '%'.$letters.'%');
-
-    return $query->getResult();
-}
-```
-
-:::tip
-
-Il existe de nombreuses syntaxes DQL pour faire des requêtes pour voir la documentation [cliquez ici !](https://www.doctrine-project.org/projects/doctrine-orm/en/current/reference/dql-doctrine-query-language.html#doctrine-query-language")
-
-:::
 
 </TabItem>
 
-<TabItem value='QB' label='Query builder'>
+</Tabs>
 
-```php
-/**
- * @return Author[]
- */
-public function findByName(string $letters): array
+### Réaliser des requêtes personnalisées
+
+Les méthodes de base que nous avons implémentées dans nos repository ne sont pas suffisantes pour la majorité des cas d'utilisation.
+Pour cela nous allons voir comment réaliser des requêtes personnalisées.
+
+Il existe deux façons de réaliser des requêtes personnalisées :
+
+- **`QueryBuilder`** : permet de créer des requêtes en utilisant le QueryBuilder de Doctrine
+- **`SQL Natif`** : permet d'écrire des requêtes en SQL
+
+<Tabs>
+
+<TabItem value='DQL' label='Query Builder'>
+
+Le Query Builder permet de créer des requêtes en utilisant des méthodes PHP. Il permet de créer des requêtes de façon dynamique en fonction de paramètres.
+
+Sa syntaxe est proche de celle du SQL, cependant, il ne s'agit pas de SQL mais de DQL (Doctrine Query Language).
+
+Les méthodes les plus utilisées sont :
+
+- **`select`** : permet de sélectionner les colonnes que l'on souhaite récupérer
+- **`from`** : permet de sélectionner la table sur laquelle on souhaite effectuer la requête
+- **`where`** : permet d'ajouter une condition à la requête
+- **`setParameter`** : permet d'ajouter un paramètre à la requête
+- **`getQuery`** : permet de récupérer la requête
+- **`getResult`** : permet d'exécuter la requête et de récupérer les résultats
+
+Les paramètres dynamiques sont représentés par des `:` suivis du nom du paramètre.
+
+Pour réaliser des requêtes personnalisées avec le Query Builder, nous allons utiliser la méthode `createQueryBuilder` de la classe `ServiceEntityRepository` de Doctrine.
+
+Cette méthode prend en paramètre un alias qui correspond à l'alias de la table sur laquelle on souhaite effectuer la requête.
+
+```php title="src/Repository/BookRepository.php"
+<?php
+
+namespace App\Repository;
+
+use App\Entity\Book;
+
+class BookRepository extends AppRepository
 {
-    $entityManager = $this->getEntityManager();
-    $queryBuilder = $entityManager->createQueryBuilder();
 
-    $queryBuilder
-    ->select(array('a'))
-    ->from('App\Entity\Author', 'a')
-    ->where($queryBuilder->expr()->orX(
-        $queryBuilder->expr()->like('a.lastName', '?1'),
-        $queryBuilder->expr()->like('a.firstName', '?1')
-    ))
-    ->orderBy('a.lastName', 'ASC')
-    ->setParameter(1, $letters);
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, Book::class);
+    }
 
-    $query = $queryBuilder ->getQuery();
-    return $query->execute();
+    public function getByAuthor($authorId)
+    {
+        // On crée un QueryBuilder sur l'entité Book avec l'alias b
+        $qb = $this->createQueryBuilder('b');
+        // On ajoute une condition sur l'identifiant de l'auteur
+        $qb->where('b.author_id = :authorId')
+            // On ajoute un paramètre à la requête
+            ->setParameter('authorId', $authorId);
+        // On récupère la requête
+        $query = $qb->getQuery();
+        // On exécute la requête et on récupère les résultats
+        $books = $query->getResult();
+        return $books;
+    }
 }
 ```
 
-:::tip
+</TabItem>
 
-Il existe de nombreuses syntaxes pour le QueryBuilder pour faire des requêtes pour voir la documentation [cliquez ici !](https://www.doctrine-project.org/projects/doctrine-orm/en/current/reference/query-builder.html)
+<TabItem value='QB' label='SQL Natif'>
 
-:::
+Il est également possible d'écrire des requêtes en SQL natif.
+
+Pour cela, nous allons utiliser la méthode `createNativeQuery` de la classe `ServiceEntityRepository` de Doctrine.
+
+Cette méthode prend en paramètre une requête SQL et un `ResultSetMapping` qui permet de mapper les résultats de la requête sur un modèle.
+
+```php title="src/Repository/BookRepository.php"
+<?php
+
+namespace App\Repository;
+
+use App\Entity\Book;
+use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\ORM\Query\ResultSetMapping;
+
+class BookRepository extends AppRepository
+{
+
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, Book::class);
+    }
+
+    public function getByAuthor($authorId)
+    {
+        // On crée un ResultSetMapping qui va mapper les résultats de la requête sur un modèle
+        $rsm = new ResultSetMapping();
+        // On ajoute les colonnes que l'on souhaite récupérer
+        $rsm->addScalarResult('id', 'id');
+        $rsm->addScalarResult('title', 'title');
+        $rsm->addScalarResult('description', 'description');
+        $rsm->addScalarResult('author_id', 'author_id');
+        // On crée la requête SQL
+        $sql = "SELECT * FROM book WHERE author_id = :authorId";
+        // On crée la requête
+        // OU $this->entityManager->createNativeQuery($sql, $rsm);
+        // si vous avez suivi le cours sans MakerBundle
+        $query = $this->getEntityManager()->createNativeQuery($sql, $rsm);
+        // On ajoute un paramètre à la requête
+        $query->setParameter('authorId', $authorId);
+        // On exécute la requête et on récupère les résultats
+        $books = $query->getResult();
+        return $books;
+    }
+}
+```
 
 </TabItem>
 
