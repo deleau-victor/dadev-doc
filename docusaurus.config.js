@@ -91,6 +91,12 @@ const config = {
 						sidebarId: 'typescript',
 						label: 'TypeScript',
 					},
+					{
+						type: 'docSidebar',
+						position: 'right',
+						sidebarId: 'bp',
+						label: 'Bonnes Pratiques',
+					},
 				],
 			},
 			footer: {
